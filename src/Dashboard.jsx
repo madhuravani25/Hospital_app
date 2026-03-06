@@ -181,7 +181,7 @@ function PageShell({ title, subtitle, children }) {
   );
 }
 
-function EmptyState({ icon, title, desc }) {
+//function EmptyState ({ icon, title, desc }) {
   return (
     <div style={{ textAlign:"center", padding:"80px 20px" }}>
       <div style={{ fontSize:56, marginBottom:14 }}>{icon}</div>
@@ -189,7 +189,7 @@ function EmptyState({ icon, title, desc }) {
       <div style={{ color:"rgba(255,255,255,0.35)", fontSize:13 }}>{desc}</div>
     </div>
   );
-}
+//}
 
 function InsurancePage() {
   return (

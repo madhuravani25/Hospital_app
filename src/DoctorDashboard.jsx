@@ -285,7 +285,7 @@ export default function DoctorDashboard() {
   });
   const [rxPreview, setRxPreview]   = useState(false);
   const [rxSaved,   setRxSaved]     = useState(false);
-  const [editingRx, setEditingRx]   = useState(null); // id of rx being viewed
+  //const [editingRx, setEditingRx]   = useState(null); // id of rx being viewed
 
   // Derived
   const activeDays   = Object.values(avail).filter(d => d.active).length;

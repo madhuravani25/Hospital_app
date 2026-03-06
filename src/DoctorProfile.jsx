@@ -163,7 +163,7 @@ export default function DoctorProfile() {
   const [step,         setStep]         = useState("browse"); // browse | confirm | success
 
   // Simulated pre-booked slots keyed by real date strings
-  const preBooked = useMemo(() => {
+ /*const preBooked = useMemo(() => {
     const map = {};
     // Seed some pre-booked slots relative to today
     for (let offset = 0; offset < 28; offset++) {
@@ -177,7 +177,7 @@ export default function DoctorProfile() {
       map[key] = sch.slots.filter((_, i) => i % 3 === 0);
     }
     return map;
-  }, []);
+  }, []);*/
 
   const getPreBooked  = (dateKey) => preBooked[dateKey]  || [];
   const getMyBooked   = (dateKey) => myBookings[dateKey] || [];
