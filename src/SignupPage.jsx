@@ -84,6 +84,8 @@ export default function SignupPage() {
         .sbar{height:3px;border-radius:99px;transition:background 0.4s;}
         .nav-link{background:none;border:none;cursor:pointer;font-weight:600;padding:0;transition:opacity 0.2s;font-family:'DM Sans',sans-serif;}
         .nav-link:hover{opacity:0.7;}
+        .terms-link{background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:'DM Sans',sans-serif;text-decoration:underline;transition:opacity 0.2s;}
+        .terms-link:hover{opacity:0.7;}
       `}</style>
 
       <div className="orb" style={{width:500,height:500,top:-180,left:-160,background:role==="doctor"?"rgba(99,102,241,0.11)":role==="patient"?"rgba(13,148,136,0.1)":"rgba(59,130,246,0.08)"}}/>
@@ -225,12 +227,18 @@ export default function SignupPage() {
                 {errors.confirmPassword&&<div style={{color:"#f87171",fontSize:11,marginTop:5}}>⚠ {errors.confirmPassword}</div>}
                 {form.confirmPassword&&form.confirmPassword===form.password&&<div style={{color:"#22c55e",fontSize:11,marginTop:5}}>✓ Passwords match</div>}
               </div>
+
+              {/* FIX: Replaced <a href="#"> with <button> elements for Terms and Privacy links */}
               <div className="fade-up d5" style={{display:"flex",alignItems:"flex-start",gap:9,marginTop:2}}>
                 <input type="checkbox" required id="terms" style={{marginTop:2,accentColor:accent,width:14,height:14,cursor:"pointer",flexShrink:0}}/>
                 <label htmlFor="terms" style={{color:"rgba(255,255,255,0.3)",fontSize:11,lineHeight:1.6,cursor:"pointer"}}>
-                  I agree to the <a href="#" style={{color:accent,textDecoration:"none"}}>Terms of Service</a> and <a href="#" style={{color:accent,textDecoration:"none"}}>Privacy Policy</a>
+                  I agree to the{" "}
+                  <button type="button" className="terms-link" style={{color:accent,fontSize:11}}>Terms of Service</button>
+                  {" "}and{" "}
+                  <button type="button" className="terms-link" style={{color:accent,fontSize:11}}>Privacy Policy</button>
                 </label>
               </div>
+
               <button type="submit" className="sbtn fade-up d5" style={{marginTop:6,background:`linear-gradient(135deg,${accent},${gradEnd})`,boxShadow:`0 8px 26px ${accentGlow}`}}>
                 Create {isDoctor?"Doctor":"Patient"} Account →
               </button>

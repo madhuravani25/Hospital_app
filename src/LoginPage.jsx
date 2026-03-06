@@ -34,16 +34,15 @@ export default function LoginPage() {
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
     setLoading(true);
-    navigate("/dashboard");
-   setTimeout(() => {
-  setLoading(false);
-  if (role === "doctor") {
-    navigate("/doctor-dashboard");  // 👨‍⚕️ Doctor goes here
-  } else {
-    navigate("/dashboard");         // 🧑‍💼 Patient goes here
-  }
-}, 1600);
-  }
+    setTimeout(() => {
+      setLoading(false);
+      if (role === "doctor") {
+        navigate("/doctor-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    }, 1600);
+  };
 
   const reset = () => {
     setRole(null); setLoggedIn(false); setLoading(false);
@@ -85,6 +84,8 @@ export default function LoginPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         .nav-link{background:none;border:none;cursor:pointer;font-weight:600;padding:0;transition:opacity 0.2s;font-family:'DM Sans',sans-serif;}
         .nav-link:hover{opacity:0.7;}
+        .forgot-btn{background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:'DM Sans',sans-serif;transition:opacity 0.2s;}
+        .forgot-btn:hover{opacity:0.7;}
       `}</style>
 
       <div className="orb" style={{width:500,height:500,top:-180,left:-160,background:role==="doctor"?"rgba(99,102,241,0.11)":role==="patient"?"rgba(13,148,136,0.1)":"rgba(59,130,246,0.08)"}}/>
@@ -185,7 +186,14 @@ export default function LoginPage() {
               <div className="fade-up d2">
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
                   <label style={{color:"rgba(255,255,255,0.38)",fontSize:10,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase"}}>Password</label>
-                  <a href="#" style={{color:accent,fontSize:11,textDecoration:"none",fontWeight:600}}>Forgot?</a>
+                  {/* FIX: Replaced <a href="#"> with a <button> for the Forgot password link */}
+                  <button
+                    type="button"
+                    className="forgot-btn"
+                    style={{color:accent, fontSize:11}}
+                  >
+                    Forgot?
+                  </button>
                 </div>
                 <div className="iw">
                   <input name="password" type={showPassword?"text":"password"} value={form.password} onChange={update}

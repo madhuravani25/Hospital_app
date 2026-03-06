@@ -1,9 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
-// ─────────────────────────────────────────────
-// DOCTOR DATA
-// ─────────────────────────────────────────────
 const DOCTOR = {
   name: "Dr. Arjun Mehta",
   specialty: "Cardiologist",
@@ -36,8 +33,6 @@ const DOCTOR = {
   ],
 };
 
-// Doctor's weekly schedule (day-of-week → slots)
-// 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 const WEEK_SCHEDULE = {
   0: { active: false, slots: [] },
   1: { active: true,  slots: ["09:00 AM","09:30 AM","10:00 AM","10:30 AM","02:00 PM","02:30 PM","03:00 PM"] },
@@ -51,14 +46,9 @@ const WEEK_SCHEDULE = {
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-// Pre-booked slots per date string "YYYY-MM-DD"
-const PRE_BOOKED = {
-  // Will be filled dynamically in the component — simulated per real dates
-};
+// FIX 1: Removed unused PRE_BOOKED constant — pre-booking is now handled
+// entirely inside the useMemo hook below, which is the correct pattern.
 
-// ─────────────────────────────────────────────
-// CSS
-// ─────────────────────────────────────────────
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; }
@@ -69,8 +59,6 @@ body { margin: 0; background: #07090f; }
 .page-scroll { overflow-y: auto; height: 100vh; }
 .page-scroll::-webkit-scrollbar { width: 4px; }
 .page-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
-
-/* ── Calendar ── */
 .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
 .cal-day-hdr { text-align: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.28); padding: 4px 0; letter-spacing: 0.06em; }
 .cal-cell { border-radius: 10px; padding: 6px 4px; text-align: center; font-size: 13px; font-weight: 600; transition: all 0.2s; cursor: default; min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px; }
@@ -82,15 +70,11 @@ body { margin: 0; background: #07090f; }
 .cal-selected { background: rgba(6,182,212,0.25); border: 1.5px solid #06b6d4; color: white; box-shadow: 0 0 16px rgba(6,182,212,0.3); transform: scale(1.05); cursor: pointer; }
 .cal-today { box-shadow: 0 0 0 1.5px rgba(251,191,36,0.5) inset; }
 .cal-full { background: rgba(239,68,68,0.07); border: 1.5px dashed rgba(239,68,68,0.2); color: rgba(255,255,255,0.25); cursor: not-allowed; }
-
-/* ── Slots ── */
 .slot { border-radius: 10px; padding: 9px 0; font-size: 12px; font-weight: 600; text-align: center; transition: all 0.2s; cursor: pointer; border: 1.5px solid; font-family: 'DM Sans', sans-serif; }
 .slot-free { background: rgba(6,182,212,0.07); border-color: rgba(6,182,212,0.25); color: #22d3ee; }
 .slot-free:hover { background: rgba(6,182,212,0.18); border-color: #06b6d4; transform: scale(1.04); }
 .slot-picked { background: rgba(6,182,212,0.22); border-color: #06b6d4; color: white; box-shadow: 0 0 14px rgba(6,182,212,0.3); }
 .slot-booked { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05); color: rgba(255,255,255,0.18); cursor: not-allowed; text-decoration: line-through; }
-
-/* ── Misc ── */
 .fade-up { animation: fu 0.44s ease both; }
 .d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}.d4{animation-delay:.24s}
 @keyframes fu { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
@@ -126,9 +110,6 @@ input[type=text]:focus, input[type=tel]:focus, textarea:focus {
 input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.25); }
 `;
 
-// ─────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────
 function toDateKey(y, m, d) {
   return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 }
@@ -143,29 +124,32 @@ function Stars({ rating, size = 14 }) {
   );
 }
 
-// ─────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────
 export default function DoctorProfile() {
   const navigate = useNavigate();
-  const today    = new Date();
-  today.setHours(0,0,0,0);
+
+  // FIX 2: `today` moved inside useMemo dependencies so it is stable.
+  // We derive a stable timestamp once on mount using useState.
+  const [todayTs] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  });
+  const today = useMemo(() => new Date(todayTs), [todayTs]);
 
   const [isOnline,     setIsOnline]     = useState(true);
   const [calYear,      setCalYear]      = useState(today.getFullYear());
   const [calMonth,     setCalMonth]     = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState(null); // Date object
+  const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [myBookings,   setMyBookings]   = useState({});   // { "YYYY-MM-DD": [slot,...] }
+  const [myBookings,   setMyBookings]   = useState({});
   const [patientName,  setPatientName]  = useState("");
   const [patientPhone, setPatientPhone] = useState("");
   const [reason,       setReason]       = useState("");
-  const [step,         setStep]         = useState("browse"); // browse | confirm | success
+  const [step,         setStep]         = useState("browse");
 
-  // Simulated pre-booked slots keyed by real date strings
- /*const preBooked = useMemo(() => {
+  // FIX 3: Added `today` to the dependency array of this useMemo.
+  const preBooked = useMemo(() => {
     const map = {};
-    // Seed some pre-booked slots relative to today
     for (let offset = 0; offset < 28; offset++) {
       const d = new Date(today);
       d.setDate(today.getDate() + offset);
@@ -173,16 +157,18 @@ export default function DoctorProfile() {
       const sch = WEEK_SCHEDULE[dow];
       if (!sch?.active || sch.slots.length === 0) continue;
       const key = toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
-      // Pre-book ~30% of slots for realism
       map[key] = sch.slots.filter((_, i) => i % 3 === 0);
     }
     return map;
-  }, []);*/
+  }, [today]);
 
   const getPreBooked  = (dateKey) => preBooked[dateKey]  || [];
   const getMyBooked   = (dateKey) => myBookings[dateKey] || [];
   const getAllBooked   = (dateKey) => [...getPreBooked(dateKey), ...getMyBooked(dateKey)];
 
+  // FIX 4: Added `today`, `preBooked`, and `myBookings` (via getAllBooked) to
+  // the dependency array of freeSlotsFor's parent useMemo (calCells) so the
+  // exhaustive-deps rule is satisfied.
   const freeSlotsFor = (date) => {
     const dow = date.getDay();
     const sch = WEEK_SCHEDULE[dow];
@@ -192,7 +178,6 @@ export default function DoctorProfile() {
     return sch.slots.filter(s => !booked.includes(s));
   };
 
-  // Build calendar cells for current month
   const calCells = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1).getDay();
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
@@ -202,20 +187,19 @@ export default function DoctorProfile() {
       const date = new Date(calYear, calMonth, d);
       const dow  = date.getDay();
       const sch  = WEEK_SCHEDULE[dow];
-      const isPast = date < today;
+      const isPast  = date < today;
       const isToday = date.getTime() === today.getTime();
       const dateKey = toDateKey(calYear, calMonth, d);
-      const free  = isPast ? 0 : freeSlotsFor(date).length;
-      const total = sch?.active ? sch.slots.length : 0;
-      cells.push({ d, date, dow, isPast, isToday, active: sch?.active && !isPast, free, total, dateKey });
+      const allBooked = [...(preBooked[dateKey] || []), ...(myBookings[dateKey] || [])];
+      const totalSlots = sch?.active ? sch.slots.length : 0;
+      const free = isPast ? 0 : (sch?.active ? sch.slots.filter(s => !allBooked.includes(s)).length : 0);
+      cells.push({ d, date, dow, isPast, isToday, active: sch?.active && !isPast, free, total: totalSlots, dateKey });
     }
     return cells;
-  }, [calYear, calMonth, myBookings]);
+  }, [calYear, calMonth, today, preBooked, myBookings]);
 
-  // Total free slots in the visible month
   const monthFreeSlots = calCells.reduce((a, c) => a + (c?.free || 0), 0);
 
-  // Navigate calendar
   const prevMonth = () => {
     if (calMonth === 0) { setCalYear(y => y-1); setCalMonth(11); }
     else setCalMonth(m => m-1);
@@ -246,17 +230,13 @@ export default function DoctorProfile() {
     setStep("browse");
   };
 
-  // Slots for selected date
   const selectedDateKey   = selectedDate ? toDateKey(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()) : null;
   const slotsForSelected  = selectedDate ? WEEK_SCHEDULE[selectedDate.getDay()]?.slots || [] : [];
   const allBookedSelected = selectedDateKey ? getAllBooked(selectedDateKey) : [];
 
-  const fmtDate = (d) => d ? d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "";
+  const fmtDate  = (d) => d ? d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "";
   const shortFmt = (d) => d ? d.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "";
 
-  // ─────────────────────────────────────────────
-  // RENDER
-  // ─────────────────────────────────────────────
   return (
     <div style={{ minHeight:"100vh", background:"#07090f", color:"white", fontFamily:"'DM Sans',sans-serif" }}>
       <style>{CSS}</style>
@@ -272,12 +252,10 @@ export default function DoctorProfile() {
             ← Back to Doctors
           </button>
 
-          {/* ══ HERO ══ */}
+          {/* HERO */}
           <div className="glass fade-up" style={{ borderRadius:28, padding:"30px 32px", marginBottom:20, position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:"linear-gradient(90deg,#06b6d4,#6366f1,#0d9488)", borderRadius:"28px 28px 0 0" }}/>
             <div style={{ display:"flex", gap:26, alignItems:"flex-start", flexWrap:"wrap" }}>
-
-              {/* Avatar */}
               <div style={{ position:"relative", flexShrink:0 }}>
                 <img src={DOCTOR.img} alt={DOCTOR.name} style={{ width:110, height:110, borderRadius:22, background:"#1e2030", border:`3px solid ${isOnline?"rgba(16,185,129,0.5)":"rgba(255,255,255,0.1)"}`, display:"block" }}/>
                 <div style={{ position:"absolute", bottom:5, right:5, width:16, height:16, borderRadius:"50%", background:isOnline?"#10b981":"#6b7280", border:"3px solid #07090f", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -285,7 +263,6 @@ export default function DoctorProfile() {
                 </div>
               </div>
 
-              {/* Info */}
               <div style={{ flex:1, minWidth:220 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:5 }}>
                   <div className="disp" style={{ fontSize:34, color:"white", lineHeight:1 }}>{DOCTOR.name}</div>
@@ -316,7 +293,6 @@ export default function DoctorProfile() {
                 </div>
               </div>
 
-              {/* Quick CTA */}
               <div style={{ flexShrink:0 }}>
                 <div className="glass-teal" style={{ borderRadius:18, padding:"18px 20px", textAlign:"center", minWidth:190 }}>
                   {isOnline ? (
@@ -326,9 +302,12 @@ export default function DoctorProfile() {
                       <div style={{ color:"rgba(255,255,255,0.4)", fontSize:12, marginBottom:12 }}>
                         {monthFreeSlots} slots this month
                       </div>
-                      <a href="#booking" style={{ display:"block", background:"linear-gradient(135deg,#06b6d4,#6366f1)", borderRadius:11, padding:"10px", color:"white", fontWeight:700, fontSize:13, textDecoration:"none", boxShadow:"0 6px 18px rgba(6,182,212,0.28)" }}>
+                      {/* FIX 5: Replaced <a href="#booking"> with a <button> to fix jsx-a11y/anchor-is-valid */}
+                      <button
+                        onClick={() => document.getElementById("booking")?.scrollIntoView({ behavior:"smooth" })}
+                        style={{ display:"block", width:"100%", background:"linear-gradient(135deg,#06b6d4,#6366f1)", borderRadius:11, padding:"10px", color:"white", fontWeight:700, fontSize:13, textDecoration:"none", border:"none", cursor:"pointer", boxShadow:"0 6px 18px rgba(6,182,212,0.28)" }}>
                         Select Date →
-                      </a>
+                      </button>
                     </>
                   ) : (
                     <>
@@ -342,19 +321,17 @@ export default function DoctorProfile() {
             </div>
           </div>
 
-          {/* ══ MAIN GRID ══ */}
+          {/* MAIN GRID */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 390px", gap:18, alignItems:"start" }}>
 
-            {/* ── LEFT ── */}
+            {/* LEFT */}
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
 
-              {/* About */}
               <div className="glass fade-up d1" style={{ borderRadius:20, padding:"20px" }}>
                 <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:10 }}>About</div>
                 <div style={{ color:"rgba(255,255,255,0.72)", fontSize:13, lineHeight:1.85 }}>{DOCTOR.about}</div>
               </div>
 
-              {/* Weekly availability summary */}
               <div className="glass fade-up d2" style={{ borderRadius:20, padding:"20px" }}>
                 <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:14 }}>Weekly Schedule</div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:6 }}>
@@ -386,7 +363,6 @@ export default function DoctorProfile() {
                 </div>
               </div>
 
-              {/* Education */}
               <div className="glass fade-up d3" style={{ borderRadius:20, padding:"20px" }}>
                 <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:14 }}>Education</div>
                 <div style={{ position:"relative" }}>
@@ -404,7 +380,6 @@ export default function DoctorProfile() {
                 </div>
               </div>
 
-              {/* Awards */}
               <div className="glass fade-up d4" style={{ borderRadius:20, padding:"20px" }}>
                 <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:12 }}>Awards & Recognition</div>
                 {DOCTOR.awards.map((a,i) => (
@@ -415,7 +390,6 @@ export default function DoctorProfile() {
                 ))}
               </div>
 
-              {/* Reviews */}
               <div className="glass fade-up" style={{ borderRadius:20, padding:"20px" }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
                   <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase" }}>Patient Reviews</div>
@@ -440,11 +414,10 @@ export default function DoctorProfile() {
               </div>
             </div>
 
-            {/* ── RIGHT — BOOKING PANEL ── */}
+            {/* RIGHT — BOOKING PANEL */}
             <div id="booking" style={{ position:"sticky", top:20, display:"flex", flexDirection:"column", gap:12 }}>
               <div className="glass" style={{ borderRadius:22, overflow:"hidden", border:"1px solid rgba(6,182,212,0.15)" }}>
 
-                {/* Panel header */}
                 <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.14),rgba(99,102,241,0.1))", borderBottom:"1px solid rgba(255,255,255,0.07)", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <div>
                     <div className="disp" style={{ fontSize:22, color:"white", lineHeight:1 }}>Book Appointment</div>
@@ -461,9 +434,8 @@ export default function DoctorProfile() {
                 {isOnline ? (
                   <div style={{ padding:"18px 20px" }}>
 
-                    {/* ── CALENDAR ── */}
+                    {/* CALENDAR */}
                     <div style={{ marginBottom:18 }}>
-                      {/* Month nav */}
                       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
                         <button onClick={prevMonth} disabled={!canGoPrev}
                           style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, width:30, height:30, color:canGoPrev?"white":"rgba(255,255,255,0.2)", cursor:canGoPrev?"pointer":"not-allowed", fontSize:14 }}>‹</button>
@@ -472,23 +444,21 @@ export default function DoctorProfile() {
                           style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, width:30, height:30, color:"white", cursor:"pointer", fontSize:14 }}>›</button>
                       </div>
 
-                      {/* Day headers */}
                       <div className="cal-grid" style={{ marginBottom:5 }}>
                         {DAY_NAMES.map(n => <div key={n} className="cal-day-hdr">{n}</div>)}
                       </div>
 
-                      {/* Calendar cells */}
                       <div className="cal-grid">
                         {calCells.map((cell, idx) => {
                           if (!cell) return <div key={`e${idx}`} className="cal-cell cal-empty"/>;
                           const isSelected = selectedDate && cell.date.getTime() === selectedDate.getTime();
                           let cls = "cal-cell ";
-                          if (cell.isPast)              cls += "cal-past";
-                          else if (!cell.active)        cls += "cal-off";
-                          else if (cell.free === 0)     cls += "cal-full";
-                          else if (isSelected)          cls += "cal-selected";
-                          else                          cls += "cal-avail";
-                          if (cell.isToday)             cls += " cal-today";
+                          if (cell.isPast)          cls += "cal-past";
+                          else if (!cell.active)    cls += "cal-off";
+                          else if (cell.free === 0) cls += "cal-full";
+                          else if (isSelected)      cls += "cal-selected";
+                          else                      cls += "cal-avail";
+                          if (cell.isToday)         cls += " cal-today";
 
                           return (
                             <div key={cell.d} className={cls} onClick={() => handleDateSelect(cell)}>
@@ -509,7 +479,6 @@ export default function DoctorProfile() {
                         })}
                       </div>
 
-                      {/* Legend */}
                       <div style={{ display:"flex", gap:12, marginTop:10, flexWrap:"wrap" }}>
                         {[
                           ["rgba(6,182,212,0.08)","rgba(6,182,212,0.22)","Available"],
@@ -525,7 +494,6 @@ export default function DoctorProfile() {
                       </div>
                     </div>
 
-                    {/* ── SELECTED DATE INFO ── */}
                     {selectedDate && (
                       <div style={{ marginBottom:16 }}>
                         <div style={{ background:"rgba(6,182,212,0.07)", border:"1px solid rgba(6,182,212,0.18)", borderRadius:12, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -534,14 +502,11 @@ export default function DoctorProfile() {
                             <div style={{ color:"white", fontWeight:700, fontSize:13, marginTop:2 }}>{fmtDate(selectedDate)}</div>
                           </div>
                           <div style={{ textAlign:"right" }}>
-                            <div style={{ color:"#10b981", fontWeight:700, fontSize:18 }}>
-                              {freeSlotsFor(selectedDate).length}
-                            </div>
+                            <div style={{ color:"#10b981", fontWeight:700, fontSize:18 }}>{freeSlotsFor(selectedDate).length}</div>
                             <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10 }}>free slots</div>
                           </div>
                         </div>
 
-                        {/* Slots grid */}
                         <div style={{ color:"rgba(255,255,255,0.35)", fontSize:10, fontWeight:600, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:8 }}>
                           Available Time Slots
                         </div>
@@ -558,7 +523,6 @@ export default function DoctorProfile() {
                           })}
                         </div>
 
-                        {/* Slot legend */}
                         <div style={{ display:"flex", gap:12, marginTop:8 }}>
                           {[["rgba(6,182,212,0.07)","rgba(6,182,212,0.25)","Free"],["rgba(6,182,212,0.22)","#06b6d4","Selected"],["rgba(255,255,255,0.02)","rgba(255,255,255,0.05)","Booked"]].map(([bg,br,l]) => (
                             <div key={l} style={{ display:"flex", alignItems:"center", gap:5, fontSize:10, color:"rgba(255,255,255,0.3)" }}>
@@ -570,7 +534,6 @@ export default function DoctorProfile() {
                       </div>
                     )}
 
-                    {/* ── SUMMARY ── */}
                     {selectedSlot && (
                       <div style={{ background:"rgba(6,182,212,0.07)", border:"1px solid rgba(6,182,212,0.18)", borderRadius:11, padding:"11px 14px", marginBottom:14 }}>
                         <div style={{ color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Your Selection</div>
@@ -598,13 +561,11 @@ export default function DoctorProfile() {
                 )}
               </div>
 
-              {/* Fee card */}
               <div className="glass" style={{ borderRadius:16, padding:"14px 18px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 <div><div style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>Consultation Fee</div><div style={{ color:"white", fontWeight:700, fontSize:20 }}>₹{DOCTOR.consultFee}</div></div>
                 <div style={{ textAlign:"right" }}><div style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>Duration</div><div style={{ color:"white", fontWeight:700, fontSize:16 }}>30 min</div></div>
               </div>
 
-              {/* Dev toggle */}
               <div className="glass" style={{ borderRadius:14, padding:"11px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 <div style={{ color:"rgba(255,255,255,0.3)", fontSize:12 }}>🎛 Simulate doctor status</div>
                 <button onClick={() => { setIsOnline(p=>!p); setSelectedDate(null); setSelectedSlot(null); }}
@@ -617,7 +578,7 @@ export default function DoctorProfile() {
         </div>
       </div>
 
-      {/* ══ CONFIRM MODAL ══ */}
+      {/* CONFIRM MODAL */}
       {step==="confirm" && (
         <div className="overlay" onClick={e=>e.target===e.currentTarget&&setStep("browse")}>
           <div className="modal pop">
@@ -626,7 +587,6 @@ export default function DoctorProfile() {
               <button onClick={()=>setStep("browse")} style={{ background:"rgba(255,255,255,0.07)", border:"none", borderRadius:8, width:30, height:30, color:"rgba(255,255,255,0.6)", cursor:"pointer", fontSize:16 }}>✕</button>
             </div>
 
-            {/* Doctor + slot summary */}
             <div style={{ background:"rgba(6,182,212,0.06)", border:"1px solid rgba(6,182,212,0.15)", borderRadius:14, padding:"14px", display:"flex", gap:12, alignItems:"center", marginBottom:20 }}>
               <img src={DOCTOR.img} alt="" style={{ width:46, height:46, borderRadius:11, background:"#1e2030" }}/>
               <div>
@@ -640,7 +600,6 @@ export default function DoctorProfile() {
               </div>
             </div>
 
-            {/* Patient details */}
             <div style={{ display:"flex", flexDirection:"column", gap:13, marginBottom:20 }}>
               <div>
                 <label style={{ display:"block", color:"rgba(255,255,255,0.38)", fontSize:10, fontWeight:600, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:6 }}>Your Name *</label>
@@ -668,7 +627,7 @@ export default function DoctorProfile() {
         </div>
       )}
 
-      {/* ══ SUCCESS MODAL ══ */}
+      {/* SUCCESS MODAL */}
       {step==="success" && (
         <div className="overlay">
           <div className="modal pop" style={{ textAlign:"center" }}>

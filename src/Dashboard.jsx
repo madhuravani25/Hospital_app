@@ -12,21 +12,19 @@ const DOCTORS = [
 
 const TIME_SLOTS = ["09:00 AM","09:30 AM","10:00 AM","10:30 AM","11:00 AM","11:30 AM","02:00 PM","02:30 PM","03:00 PM","03:30 PM","04:00 PM","04:30 PM"];
 
-// Weekly schedule per doctor (0=Sun…6=Sat)
 const DOCTOR_SCHEDULES = {
-  1: { 0:false, 1:true,  2:true,  3:false, 4:true,  5:true,  6:true  }, // Dr. Arjun
-  2: { 0:false, 1:true,  2:false, 3:true,  4:true,  5:true,  6:false }, // Dr. Priya
-  3: { 0:false, 1:true,  2:true,  3:true,  4:false, 5:true,  6:true  }, // Dr. Ramesh
-  4: { 0:false, 1:false, 2:true,  3:false, 4:true,  5:false, 6:false }, // Dr. Anita (offline)
-  5: { 0:false, 1:true,  2:true,  3:false, 4:true,  5:true,  6:false }, // Dr. Suresh
-  6: { 0:false, 1:false, 2:true,  3:true,  4:false, 5:true,  6:true  }, // Dr. Meena
+  1: { 0:false, 1:true,  2:true,  3:false, 4:true,  5:true,  6:true  },
+  2: { 0:false, 1:true,  2:false, 3:true,  4:true,  5:true,  6:false },
+  3: { 0:false, 1:true,  2:true,  3:true,  4:false, 5:true,  6:true  },
+  4: { 0:false, 1:false, 2:true,  3:false, 4:true,  5:false, 6:false },
+  5: { 0:false, 1:true,  2:true,  3:false, 4:true,  5:true,  6:false },
+  6: { 0:false, 1:false, 2:true,  3:true,  4:false, 5:true,  6:true  },
 };
 
-const SLOT_COUNTS = { 1:7, 2:6, 3:5, 4:4, 5:6, 6:4 }; // total slots per working day
+const SLOT_COUNTS = { 1:7, 2:6, 3:5, 4:4, 5:6, 6:4 };
 
 const DAY_SHORT = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-// Get next available date string for a doctor
 function getNextAvailable(docId) {
   const sched = DOCTOR_SCHEDULES[docId];
   if (!sched) return null;
@@ -42,7 +40,6 @@ function getNextAvailable(docId) {
   return "No slots soon";
 }
 
-// Count slots available this week
 function getWeekSlots(docId) {
   const sched = DOCTOR_SCHEDULES[docId];
   if (!sched) return 0;
@@ -181,15 +178,8 @@ function PageShell({ title, subtitle, children }) {
   );
 }
 
-//function EmptyState ({ icon, title, desc }) {
-  return (
-    <div style={{ textAlign:"center", padding:"80px 20px" }}>
-      <div style={{ fontSize:56, marginBottom:14 }}>{icon}</div>
-      <div className="disp" style={{ fontSize:26, color:"white", marginBottom:8 }}>{title}</div>
-      <div style={{ color:"rgba(255,255,255,0.35)", fontSize:13 }}>{desc}</div>
-    </div>
-  );
-//}
+// FIX 1: EmptyState was commented out incorrectly — the return was left dangling.
+// It is now fully removed since it is never used anywhere in this file.
 
 function InsurancePage() {
   return (
@@ -373,7 +363,6 @@ function OthersPage() {
   );
 }
 
-// ── PRESCRIPTION DATA ──────────────────────────────────────────────────────────
 const PRESCRIPTIONS = [
   {
     id: 1,
@@ -538,14 +527,12 @@ const STATUS_STYLE = {
 function PrescriptionsPage() {
   const [expanded, setExpanded] = useState(null);
 
-  // Merge hardcoded samples + any prescriptions doctor saved live
   const [livePrescriptions, setLivePrescriptions] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("medicare_prescriptions") || "[]");
     } catch(e) { return []; }
   });
 
-  // Poll localStorage every 2 seconds so patient sees new Rx without page refresh
   useEffect(() => {
     const interval = setInterval(() => {
       try {
@@ -556,13 +543,10 @@ function PrescriptionsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Live prescriptions on top, then hardcoded samples below
   const allPrescriptions = [...livePrescriptions, ...PRESCRIPTIONS];
 
   return (
     <PageShell title="Prescriptions" subtitle="Medication prescriptions issued by your doctors">
-
-      {/* Live indicator if doctor just sent one */}
       {livePrescriptions.length > 0 && (
         <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(16,185,129,0.08)", border:"1px solid rgba(16,185,129,0.2)", borderRadius:11, padding:"9px 14px", marginBottom:16 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#10b981", animation:"pulse 2s infinite" }}/>
@@ -572,7 +556,6 @@ function PrescriptionsPage() {
         </div>
       )}
 
-      {/* Summary stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:22 }}>
         {[
           { label:"Total Prescriptions", value: allPrescriptions.length,                                           icon:"📋", color:"#06b6d4" },
@@ -587,7 +570,6 @@ function PrescriptionsPage() {
         ))}
       </div>
 
-      {/* Prescription cards */}
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
         {allPrescriptions.map(rx => {
           const st   = STATUS_STYLE[rx.status] || STATUS_STYLE.Completed;
@@ -595,16 +577,10 @@ function PrescriptionsPage() {
           const isNew = livePrescriptions.some(l => l.id === rx.id);
           return (
             <div key={rx.id} className="glass" style={{ borderRadius:18, border:`1px solid ${isNew ? "rgba(16,185,129,0.22)" : "rgba(255,255,255,0.08)"}`, overflow:"hidden", transition:"border-color 0.2s" }}>
-
-              {/* Card header */}
               <div style={{ padding:"18px 20px", cursor:"pointer", display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}
                 onClick={() => setExpanded(open ? null : rx.id)}>
-
-                {/* Doctor avatar */}
                 <img src={rx.doctorImg} alt={rx.doctorName}
                   style={{ width:50, height:50, borderRadius:13, background:"#1e2030", border:"2px solid rgba(255,255,255,0.1)", flexShrink:0 }}/>
-
-                {/* Info */}
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
                     <span style={{ color:"white", fontWeight:700, fontSize:14 }}>{rx.doctorName}</span>
@@ -627,8 +603,6 @@ function PrescriptionsPage() {
                     <span style={{ color:"rgba(255,255,255,0.4)", fontSize:12 }}>💊 {rx.medicines.length} medicine{rx.medicines.length!==1?"s":""}</span>
                   </div>
                 </div>
-
-                {/* Actions */}
                 <div style={{ display:"flex", gap:8, flexShrink:0 }}>
                   <button onClick={e=>{e.stopPropagation(); downloadRx(rx);}}
                     style={{ background:"linear-gradient(135deg,#6366f1,#8b5cf6)", border:"none", borderRadius:10, padding:"8px 16px", color:"white", fontSize:12, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 12px rgba(99,102,241,0.3)", display:"flex", alignItems:"center", gap:6 }}>
@@ -641,11 +615,8 @@ function PrescriptionsPage() {
                 </div>
               </div>
 
-              {/* Expanded detail */}
               {open && (
                 <div style={{ borderTop:"1px solid rgba(255,255,255,0.07)", padding:"18px 20px", background:"rgba(255,255,255,0.02)" }}>
-
-                  {/* Medicines */}
                   <div style={{ color:"#06b6d4", fontSize:10, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:12, display:"flex", alignItems:"center", gap:7 }}>
                     <span style={{ fontFamily:"serif", fontSize:16, fontWeight:900 }}>Rx</span> Medicines Prescribed
                   </div>
@@ -673,7 +644,6 @@ function PrescriptionsPage() {
                     ))}
                   </div>
 
-                  {/* Notes */}
                   {rx.notes && (
                     <div style={{ background:"rgba(16,185,129,0.06)", border:"1px solid rgba(16,185,129,0.15)", borderLeft:"3px solid #10b981", borderRadius:10, padding:"12px 14px", marginBottom:12 }}>
                       <div style={{ color:"#10b981", fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>📋 Doctor's Notes & Advice</div>
@@ -681,7 +651,6 @@ function PrescriptionsPage() {
                     </div>
                   )}
 
-                  {/* Follow-up + download */}
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
                     <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
                       {rx.followup && (
@@ -731,7 +700,6 @@ function MedicalRecordsPage() {
   );
 }
 
-// ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
   const [activeTab,     setActiveTab]     = useState("doctors");
@@ -744,10 +712,7 @@ export default function Dashboard() {
   const [searchTerm,    setSearchTerm]    = useState("");
   const [filterSpec,    setFilterSpec]    = useState("All");
   const [cancelId,      setCancelId]      = useState(null);
-
-  // ✅ FIX: removed the stray } that was here — all logic is now inside the function
-
-  const [filterAvail, setFilterAvail]  = useState("all"); // all | today | available
+  const [filterAvail,   setFilterAvail]   = useState("all");
 
   const today = new Date().toISOString().split("T")[0];
   const getBookedForSlot = (docId, date) => bookedSlots[`${docId}_${date}`] || [];
@@ -860,7 +825,6 @@ export default function Dashboard() {
                 {specs.map(s => <button key={s} className={`filter-btn ${filterSpec===s?"active":""}`} onClick={()=>setFilterSpec(s)}>{s}</button>)}
               </div>
             </div>
-            {/* Availability quick filters */}
             <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
               {[
                 { key:"all",       label:"All Doctors",      icon:"👨‍⚕️" },
@@ -889,19 +853,15 @@ export default function Dashboard() {
                 const sched     = DOCTOR_SCHEDULES[doc.id] || {};
                 const nextAvail = doc.available ? getNextAvailable(doc.id) : null;
                 const weekSlots = doc.available ? getWeekSlots(doc.id) : 0;
-                const todayDow  = new Date().getDay();
                 const isAvailToday = doc.available && sched[todayDow];
                 const availChipCls = !doc.available ? "avail-off" : nextAvail==="Today" ? "avail-today" : "avail-soon";
 
                 return (
                   <div key={doc.id} className="glass doc-card"
                     style={{ borderRadius:18, padding:"18px", border: doc.available ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.04)", animationDelay:`${i*0.05}s`, opacity: doc.available ? 1 : 0.72 }}>
-
-                    {/* ── Header row ── */}
                     <div style={{ display:"flex", alignItems:"flex-start", gap:12, marginBottom:12 }}>
                       <div style={{ position:"relative", flexShrink:0 }}>
                         <img src={doc.img} alt={doc.name} style={{ width:56, height:56, borderRadius:14, border:"2px solid rgba(255,255,255,0.1)", background:"#1e2030" }}/>
-                        {/* Live pulse dot */}
                         <div style={{ position:"absolute", bottom:-2, right:-2, width:13, height:13, borderRadius:"50%", background:doc.available?"#10b981":"#6b7280", border:"2.5px solid #07090f", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           {doc.available && <div className="live-dot" style={{ width:5, height:5, borderRadius:"50%", background:"white" }}/>}
                         </div>
@@ -912,7 +872,6 @@ export default function Dashboard() {
                           <div style={{ width:4, height:4, borderRadius:"50%", background:sc.dot }}/>
                           <span style={{ color:sc.text, fontSize:10, fontWeight:600 }}>{doc.specialty}</span>
                         </div>
-                        {/* Availability chip */}
                         <div>
                           <span className={`badge ${availChipCls}`} style={{ fontSize:10, borderRadius:99, padding:"3px 9px" }}>
                             {!doc.available ? "⛔ Unavailable" : nextAvail==="Today" ? "🟢 Available Today" : `📅 Next: ${nextAvail}`}
@@ -921,7 +880,6 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {/* ── Stats row ── */}
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginBottom:12 }}>
                       {[["Exp",doc.exp],["⭐",doc.rating],["Fee",`₹${doc.fee}`]].map(([l,v]) => (
                         <div key={l} style={{ background:"rgba(255,255,255,0.04)", borderRadius:9, padding:"7px 5px", textAlign:"center" }}>
@@ -931,7 +889,6 @@ export default function Dashboard() {
                       ))}
                     </div>
 
-                    {/* ── Weekly availability pips ── */}
                     <div style={{ marginBottom:12 }}>
                       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
                         <span style={{ color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:600, letterSpacing:"0.08em", textTransform:"uppercase" }}>This Week</span>
@@ -945,9 +902,9 @@ export default function Dashboard() {
                           const isTodayDow = dow === todayDow;
                           const label   = DAY_SHORT[dow];
                           let cls = "day-pip ";
-                          if (!isOn)       cls += "pip-off";
+                          if (!isOn)           cls += "pip-off";
                           else if (isTodayDow) cls += "pip-today";
-                          else             cls += "pip-on";
+                          else                 cls += "pip-on";
                           return (
                             <div key={dow} className={cls} title={isOn ? `Available on ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dow]}` : "Off"}>
                               {label}
@@ -965,7 +922,6 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {/* ── Today's slot preview ── */}
                     {isAvailToday && (
                       <div style={{ background:"rgba(16,185,129,0.06)", border:"1px solid rgba(16,185,129,0.14)", borderRadius:10, padding:"8px 11px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -978,7 +934,6 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    {/* ── Book button ── */}
                     <button onClick={() => doc.available && navigate(`/doctor/${doc.id}`)} disabled={!doc.available}
                       style={{ width:"100%", border:"none", borderRadius:11, padding:"10px", fontSize:12, fontWeight:700, cursor:doc.available?"pointer":"not-allowed", background:doc.available?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,0.05)", color:doc.available?"white":"rgba(255,255,255,0.2)", boxShadow:doc.available?"0 4px 14px rgba(99,102,241,0.28)":"none", transition:"all 0.3s" }}>
                       {doc.available ? (nextAvail==="Today" ? "📅 Book Today's Slot" : `📅 Book — Next: ${nextAvail}`) : "⛔ Not Available"}
@@ -1141,4 +1096,4 @@ export default function Dashboard() {
       )}
     </div>
   );
-} // ✅ ONE closing brace — closes Dashboard() function
+}
